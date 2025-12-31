@@ -103,6 +103,7 @@
       getAuth, signInWithPopup, GoogleAuthProvider,
       signInWithEmailAndPassword
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCRNRlGcGNNT_s6Io1I5KTlzWnAh6SQOaI",
@@ -115,9 +116,10 @@
       measurementId: "G-E05JH3NEYY"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+  const provider = new GoogleAuthProvider();
 
     const googleBtn = document.getElementById("google-login-btn");
     const emailBtn = document.getElementById("email-login-btn");
@@ -125,6 +127,18 @@
     googleBtn.addEventListener("click", async () => {
       try {
         const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Add user to Realtime Database under /Friends/{uid} if not present
+        const userRef = ref(db, "Friends/" + user.uid);
+        const snapshot = await get(child(ref(db), "Friends/" + user.uid));
+        if (!snapshot.exists()) {
+          await set(userRef, {
+            name: user.displayName,
+            connections: []
+          });
+        }
+
         window.location.href = "index.html"; // redirect after login
       } catch (err) {
         alert("Google login failed: " + err.message);

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Modular Network Dashboard</title>
+  <style>
+    body { background: #0d1117; color: #c9d1d9; margin: 0; font-family: sans-serif; }
+    .dashboard {
+      padding: 20px;
+    }
+    header { padding: 20px; text-align: center; }
+  </style>
+  
+  <script type="module" src="AuthHeader.js"></script>
+  <script type="module" src="NetworkGraph.js"></script>
+</head>
+<body>
+<auth-header></auth-header>
+  <header>
+    <h1>Friend Network</h1>
+  </header>
+
+  <main class="dashboard">
+    <network-graph></network-graph>
+  </main>
+</body>
+</html>

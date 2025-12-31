@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Network Intelligence - User View</title>
+  <style>
+    body { background: #0d1117; color: #c9d1d9; margin: 0; font-family: sans-serif; }
+    
+    .dashboard {
+      display: grid;
+      /* Column 1: Graph (Wide), Column 2: Unconnected, Column 3: Connected */
+      grid-template-columns: 2fr 1fr 1fr; 
+      gap: 20px;
+      padding: 20px;
+      align-items: start;
+    }
+
+    header { padding: 30px; text-align: center; }
+
+    /* Optional: style the lists slightly differently to distinguish them */
+    connections-list[mode="unconnected"] {
+      border-top: 3px solid #f85149; /* Red accent for unconnected */
+      border-radius: 8px;
+    }
+
+    connections-list[mode="connected"] {
+      border-top: 3px solid #238636; /* Green accent for connected */
+      border-radius: 8px;
+    }
+  </style>
+  
+  <script type="module" src="test/AuthHeader.js"></script>
+  <script type="module" src="test/NetworkGraph.js"></script>
+  <script type="module" src="test/ConnectionsList.js"></script>
+</head>
+<body>
+  <auth-header id="main-auth"></auth-header>
+  
+  <header>
+  </header>
+
+  <main class="dashboard">
+    <network-graph></network-graph>
+
+    <connections-list mode="unconnected"></connections-list>
+
+    <connections-list mode="connected"></connections-list>
+  </main>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Modular Network Dashboard</title>
+  <style>
+    body { background: #0d1117; color: #c9d1d9; margin: 0; font-family: sans-serif; }
+    .dashboard {
+      display: grid;
+      grid-template-columns: 2fr 1fr; /* Graph takes 2 parts, List takes 1 */
+      gap: 20px;
+      padding: 20px;
+    }
+    header { padding: 20px; text-align: center; }
+    connections-list {
+        display: block;
+        min-height: 400px; /* Ensure it doesn't shrink to 0 */
+        background: #1c2128; /* Same as the container to see if it's there */
+    }
+  </style>
+  
+  <script type="module" src="AuthHeader.js"></script>
+  <script type="module" src="NetworkGraph.js"></script>
+  <script type="module" src="ConnectionsList.js"></script>
+</head>
+<body>
+<auth-header></auth-header>
+  <header>
+    <h1>Network Intelligence</h1>
+  </header>
+
+  <main class="dashboard">
+    <network-graph></network-graph>
+
+    <connections-list></connections-list>
+  </main>
+</body>
+</html>

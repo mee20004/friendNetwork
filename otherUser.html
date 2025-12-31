@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Profile - Network Intelligence</title>
+  <style>
+    body { background: #0d1117; color: #c9d1d9; margin: 0; font-family: sans-serif; }
+    
+    .dashboard {
+      display: grid;
+      /* Two columns: Graph takes more space, List takes the rest */
+      grid-template-columns: 2fr 1fr; 
+      gap: 20px;
+      padding: 20px;
+      align-items: start;
+    }
+
+    header { padding: 30px; text-align: center; }
+
+    /* Highlight that this is a profile view */
+    connections-list {
+      border-top: 3px solid #58a6ff; /* Blue accent for general profiles */
+      border-radius: 8px;
+    }
+
+  </style>
+  
+  <script type="module" src="test/AuthHeader.js"></script>
+  <script type="module" src="test/NetworkGraph.js"></script>
+  <script type="module" src="test/ConnectionsList.js"></script>
+</head>
+<body>
+  <auth-header id="main-auth"></auth-header>
+
+  <header>
+  </header>
+
+  <main class="dashboard">
+    <network-graph></network-graph>
+
+    <connections-list mode="connected"></connections-list>
+  </main>
+
+  <script>
+    // Simple script to update the H1 with the target user's name
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get('user');
+    if (target) {
+      document.getElementById('profile-title').innerText = `${target}'s Network`;
+    }
+  </script>
+</body>
+</html>
