@@ -8,76 +8,74 @@
   <style>
     body {
       margin: 0;
-      font-family: system-ui, sans-serif;
-      background: #f0f2f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      /* Dark background to match index/user pages */
+      background: #0d1117;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
+      color: #c9d1d9;
     }
 
     .login-card {
-      background: white;
-      width: 360px;
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+      background: #1c2128;
+      width: 340px;
+      padding: 2.5rem;
+      border-radius: 8px;
+      border: 1px solid #30363d;
       text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
     }
 
     h1 {
-      margin-bottom: 0.25rem;
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: #333;
+      margin-bottom: 0.5rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #58a6ff; /* Blue accent matching your titles */
     }
 
     p {
       margin-top: 0;
-      margin-bottom: 1.5rem;
-      color: #555;
-    }
-
-    input {
-      width: 100%;
-      padding: 0.7rem;
-      margin: 0.4rem 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
+      margin-bottom: 2rem;
+      color: #8b949e;
+      font-size: 0.9rem;
     }
 
     .btn {
       width: 100%;
-      padding: 0.7rem;
-      margin-top: 0.5rem;
-      border-radius: 8px;
-      border: none;
-      font-size: 1rem;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 0.95rem;
       cursor: pointer;
       font-weight: 600;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
-    .btn-primary {
-      background: #1877f2;
-      color: white;
-    }
-    .btn-primary:hover {
-      background: #0f5bd0;
-    }
-
+    /* Updated to match your Connect/Disconnect outline style */
     .btn-google {
-      background: #4285f4;
-      color: white;
-    }
-    .btn-google:hover {
-      background: #3367d6;
+      background: transparent;
+      color: #58a6ff;
+      border: 1px solid #58a6ff;
     }
 
-    .divider {
-      margin: 1.2rem 0;
-      font-size: 0.85rem;
-      color: #777;
+    .btn-google:hover {
+      background: rgba(88, 166, 255, 0.1);
+      border-color: #58a6ff;
+    }
+
+    .btn-google:active {
+      background: rgba(88, 166, 255, 0.2);
+    }
+
+    /* Simple icon placeholder for Google G */
+    .google-icon {
+      font-style: normal;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -85,23 +83,17 @@
 
   <div class="login-card">
     <h1>Friend Network</h1>
-    <p>Sign in to continue</p>
+    <p>Sign in to explore connections</p>
 
-    <!-- Email login fields (optional for later) -->
-    <input type="email" id="email-input" placeholder="Email" />
-    <input type="password" id="password-input" placeholder="Password" />
-    <button class="btn btn-primary" id="email-login-btn">Log In</button>
-
-    <div class="divider">or</div>
-
-    <button class="btn btn-google" id="google-login-btn">Continue with Google</button>
+    <button class="btn btn-google" id="google-login-btn">
+      <span class="google-icon"></span> Continue with Google
+    </button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { 
-      getAuth, signInWithPopup, GoogleAuthProvider,
-      signInWithEmailAndPassword
+      getAuth, signInWithPopup, GoogleAuthProvider
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
     import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
@@ -116,22 +108,21 @@
       measurementId: "G-E05JH3NEYY"
     };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getDatabase(app);
-  const provider = new GoogleAuthProvider();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+    const provider = new GoogleAuthProvider();
 
     const googleBtn = document.getElementById("google-login-btn");
-    const emailBtn = document.getElementById("email-login-btn");
 
     googleBtn.addEventListener("click", async () => {
       try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
 
-        // Add user to Realtime Database under /Friends/{uid} if not present
         const userRef = ref(db, "Friends/" + user.uid);
         const snapshot = await get(child(ref(db), "Friends/" + user.uid));
+        
         if (!snapshot.exists()) {
           await set(userRef, {
             name: user.displayName,
@@ -139,20 +130,11 @@
           });
         }
 
-        window.location.href = "index.html"; // redirect after login
+        // Redirect to index.html with 'me' parameter so your list component works
+        window.location.href = `index.html?user=${encodeURIComponent(user.displayName)}&me=${encodeURIComponent(user.displayName)}`;
       } catch (err) {
-        alert("Google login failed: " + err.message);
-      }
-    });
-
-    emailBtn.addEventListener("click", async () => {
-      const email = document.getElementById("email-input").value.trim();
-      const pass = document.getElementById("password-input").value.trim();
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        window.location.href = "firebase.html";
-      } catch (err) {
-        alert("Email login failed: " + err.message);
+        console.error("Login Error:", err);
+        alert("Login failed. Check console for details.");
       }
     });
   </script>

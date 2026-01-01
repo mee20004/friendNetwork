@@ -9,7 +9,7 @@ class FriendNetworkGraph extends HTMLElement {
     this.db = db; 
     this.allFriends = {};
     this.unsubscribe = null;
-    this.isGlobalMode = false; // The new "Backend Switch" state
+    this.isGlobalMode = false; 
   }
 
   connectedCallback() {
@@ -34,6 +34,7 @@ class FriendNetworkGraph extends HTMLElement {
           overflow: hidden; 
           position: relative;
         }
+
         /* Toggle Switch Styling */
         .controls {
           position: absolute;
@@ -80,11 +81,20 @@ class FriendNetworkGraph extends HTMLElement {
 
         svg { animation: fadeIn 0.6s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
         .link { stroke: #58a6ff; stroke-opacity: 0.3; stroke-width: 2; }
+
+        /* Base Node Style */
         .node circle { fill: #1f6feb; stroke: #fff; stroke-width: 2; cursor: pointer; transition: fill 0.3s; }
         .node:hover circle { fill: #58a6ff; }
+        
+        /* Logged in User Style - ORANGE (Priority) */
+        .node.is-me circle { fill: #eb7b1f !important; stroke: #fff; stroke-width: 3; }
+        
+        /* Selected User Style - GREEN */
+        .node.is-selected circle { fill: #238636 !important; stroke: #fff; stroke-width: 3; }
+
         .node text { font-size: 12px; fill: #c9d1d9; pointer-events: none; text-anchor: middle; font-weight: bold; }
-        .node.is-me circle { fill: #eb7b1fff; stroke: #fff; stroke-width: 3; }
       </style>
       <div id="container">
         <div class="controls">
@@ -116,105 +126,110 @@ class FriendNetworkGraph extends HTMLElement {
   applyUrlFilter() {
     const params = new URLSearchParams(window.location.search);
     const userFilter = params.get('user'); 
-    
-    // Logic: If isGlobalMode is true, pass an empty string to ignore filtering
     const filterToUse = this.isGlobalMode ? "" : (userFilter ? userFilter.toLowerCase().trim() : "");
     this.drawGraph(this.allFriends, filterToUse);
   }
 
-  drawGraph(friends, filterQuery = "") {
-    const container = this.shadowRoot.getElementById("container");
-    const width = container.offsetWidth;
-    const height = container.offsetHeight;
-    if (width === 0 || height === 0) {
-      requestAnimationFrame(() => this.drawGraph(friends, filterQuery));
-      return;
-    }
-
-    // Clear previous SVG but keep the controls
-    const existingSvg = this.shadowRoot.querySelector("svg");
-    if (existingSvg) existingSvg.remove();
-    
-    const svg = d3.select(container).append("svg")
-      .attr("width", "100%")
-      .attr("height", "100%")
-      .attr("viewBox", `0 0 ${width} ${height}`);
-
-    let filteredNodeIds = Object.keys(friends);
-    let targetId = null;
-
-    // FIND TARGET (for color highlighting) even in global mode
-    const params = new URLSearchParams(window.location.search);
-    const urlUser = params.get('user')?.toLowerCase();
-    targetId = Object.keys(friends).find(id => friends[id].name.toLowerCase() === urlUser);
-
-    if (filterQuery) {
-      // If we have a filter query, we only show that person and their connections
-      if (targetId) {
-        const connections = friends[targetId].connections || [];
-        filteredNodeIds = [targetId, ...connections];
-      }
-    }
-
-    const nodes = filteredNodeIds.map(id => ({ 
-        id, 
-        name: friends[id].name,
-        isMe: id === targetId,
-        x: width / 2 + (Math.random() - 0.5) * 100,
-        y: height / 2 + (Math.random() - 0.5) * 100
-    }));
-
-    const links = [];
-    filteredNodeIds.forEach(sourceId => {
-      friends[sourceId].connections?.forEach(sid => {
-        if (filteredNodeIds.includes(sid)) {
-            links.push({ source: sourceId, target: sid });
+    drawGraph(friends, filterQuery = "") {
+        const container = this.shadowRoot.getElementById("container");
+        const width = container.offsetWidth;
+        const height = container.offsetHeight;
+        if (width === 0 || height === 0) {
+        requestAnimationFrame(() => this.drawGraph(friends, filterQuery));
+        return;
         }
-      });
-    });
 
-    const g = svg.append("g");
-    
-    const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id(d => d.id).distance(150))
-      .force("charge", d3.forceManyBody().strength(-800))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(50)) // Prevent overlaps in crowded global view
-      .alphaDecay(0.04)
-      .on("tick", () => {
-        link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-        node.attr("transform", d => `translate(${d.x},${d.y})`);
-      });
+        const existingSvg = this.shadowRoot.querySelector("svg");
+        if (existingSvg) existingSvg.remove();
+        
+        const svg = d3.select(container).append("svg")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("viewBox", `0 0 ${width} ${height}`);
 
-    const link = g.append("g").selectAll("line")
-      .data(links).join("line").attr("class", "link");
-    
-    const node = g.append("g").selectAll("g")
-      .data(nodes).join("g")
-      .attr("class", d => d.isMe ? "node is-me" : "node")
-      .on("click", (event, d) => {
         const params = new URLSearchParams(window.location.search);
-        const myName = params.get('me');
-        const clickedName = encodeURIComponent(d.name);
-        if (d.name.toLowerCase() === myName?.toLowerCase()) {
-          window.location.href = `user.html?user=${clickedName}&me=${clickedName}`;
-        } else {
-          window.location.href = `otherUser.html?user=${clickedName}&me=${encodeURIComponent(myName)}`;
-        }
-      })
-      .call(d3.drag()
-        .on("start", (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
-        .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
-        .on("end", (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }));
+        const urlUser = params.get('user')?.toLowerCase();
+        const urlMe = params.get('me')?.toLowerCase();
 
-    node.append("circle").attr("r", d => d.isMe ? 25 : 20);
-    node.append("text").attr("dy", d => d.isMe ? 45 : 40).text(d => d.name);
-    
-    svg.call(d3.zoom()
-      .scaleExtent([0.1, 4]) // Allow more zooming for global view
-      .on("zoom", (e) => g.attr("transform", e.transform)));
-  }
+        // Identify target IDs from names
+        const selectedId = Object.keys(friends).find(id => friends[id].name.toLowerCase() === urlUser);
+        const meId = Object.keys(friends).find(id => friends[id].name.toLowerCase() === urlMe);
+
+        let filteredNodeIds = Object.keys(friends);
+
+        if (filterQuery) {
+        if (selectedId) {
+            const connections = friends[selectedId].connections || [];
+            // Only include the selected user and their direct connections.
+            // If "Me" (the logged-in user) is not in that connections list, 
+            // they will not be included in filteredNodeIds.
+            filteredNodeIds = [selectedId, ...connections];
+        }
+        }
+
+        const nodes = filteredNodeIds.map(id => ({ 
+            id, 
+            name: friends[id].name,
+            isMe: id === meId, 
+            isSelected: (id === selectedId && id !== meId),
+            x: width / 2 + (Math.random() - 0.5) * 100,
+            y: height / 2 + (Math.random() - 0.5) * 100
+        }));
+
+        const links = [];
+        filteredNodeIds.forEach(sourceId => {
+        friends[sourceId].connections?.forEach(sid => {
+            if (filteredNodeIds.includes(sid)) {
+                links.push({ source: sourceId, target: sid });
+            }
+        });
+        });
+
+        const g = svg.append("g");
+        
+        const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-800))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(60))
+        .alphaDecay(0.04)
+        .on("tick", () => {
+            link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        const link = g.append("g").selectAll("line")
+        .data(links).join("line").attr("class", "link");
+        
+        const node = g.append("g").selectAll("g")
+        .data(nodes).join("g")
+        .attr("class", d => {
+            if (d.isMe) return "node is-me";
+            if (d.isSelected) return "node is-selected";
+            return "node";
+        })
+        .on("click", (event, d) => {
+            const myName = params.get('me');
+            const clickedName = encodeURIComponent(d.name);
+            if (d.name.toLowerCase() === myName?.toLowerCase()) {
+            window.location.href = `user.html?user=${clickedName}&me=${clickedName}`;
+            } else {
+            window.location.href = `otherUser.html?user=${clickedName}&me=${encodeURIComponent(myName)}`;
+            }
+        })
+        .call(d3.drag()
+            .on("start", (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+            .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+            .on("end", (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+        node.append("circle").attr("r", d => (d.isMe || d.isSelected) ? 26 : 20);
+        node.append("text").attr("dy", d => (d.isMe || d.isSelected) ? 46 : 40).text(d => d.name);
+        
+        svg.call(d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on("zoom", (e) => g.attr("transform", e.transform)));
+    }
 }
 
 customElements.define("network-graph", FriendNetworkGraph);

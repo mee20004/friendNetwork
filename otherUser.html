@@ -2,27 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Profile - Network Intelligence</title>
   <style>
-    body { background: #0d1117; color: #c9d1d9; margin: 0; font-family: sans-serif; }
+    /* Global Page Styling */
+    body { 
+      background: #0d1117; 
+      color: #c9d1d9; 
+      margin: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; 
+      padding-top: 70px; /* Offset for fixed AuthHeader */
+    }
     
+    header { 
+      padding: 0px; 
+      text-align: center; 
+    }
+
+    h1 {
+      color: #238636;
+      font-size: 1.8rem;
+      margin-bottom: 0px;
+    }
+
     .dashboard {
       display: grid;
-      /* Two columns: Graph takes more space, List takes the rest */
       grid-template-columns: 2fr 1fr; 
-      gap: 20px;
+      gap: 24px;
       padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
       align-items: start;
     }
 
-    header { padding: 30px; text-align: center; }
-
-    /* Highlight that this is a profile view */
+    /* Profile specific highlight for the list */
     connections-list {
-      border-top: 3px solid #58a6ff; /* Blue accent for general profiles */
+      border-top: 3px solid #58a6ff;
       border-radius: 8px;
     }
 
+    /* Floating Action Button (FAB) Styling */
+    .fab-container {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      z-index: 1000;
+    }
+
+    .fab {
+      padding: 14px 28px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      background: #1c2128;
+      border: 2px solid;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .fab-connect {
+      color: #3fb950;
+      border-color: #3fb950;
+    }
+    .fab-connect:hover {
+      background: rgba(63, 185, 80, 1);
+      transform: translateY(-5px);
+      box-shadow: 0 12px 20px rgba(63, 185, 80, 0.2);
+      color: #fff;
+    }
+
+    .fab-disconnect {
+      color: #f85149;
+      border-color: #f85149;
+    }
+    .fab-disconnect:hover {
+      background: rgba(248, 81, 73, 1);
+      transform: translateY(-5px);
+      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
+      color: #fff;
+    }
+
+    /* Responsive adjustment */
+    @media (max-width: 900px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
   
   <script type="module" src="test/AuthHeader.js"></script>
@@ -30,10 +101,10 @@
   <script type="module" src="test/ConnectionsList.js"></script>
 </head>
 <body>
+
   <auth-header id="main-auth"></auth-header>
 
-  <header>
-  </header>
+
 
   <main class="dashboard">
     <network-graph></network-graph>
@@ -41,13 +112,99 @@
     <connections-list mode="connected"></connections-list>
   </main>
 
-  <script>
-    // Simple script to update the H1 with the target user's name
+  <div id="action-button-container"></div>
+
+  <script type="module">
+    import { ref, get, child, update } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    import { db } from "./test/firebase-config.js";
+
     const params = new URLSearchParams(window.location.search);
-    const target = params.get('user');
-    if (target) {
-      document.getElementById('profile-title').innerText = `${target}'s Network`;
+    const viewUserName = params.get('user'); 
+    const loggedInName = params.get('me'); 
+    const container = document.getElementById('action-button-container');
+    const titleEl = document.getElementById('profile-title');
+
+    // Update the Page Title
+
+
+    /**
+     * Updates the Floating Action Button based on the friendship status
+     */
+    async function updateFloatingButton() {
+      // Don't show button if viewing own profile or if missing params
+      if (!loggedInName || !viewUserName || loggedInName.toLowerCase() === viewUserName.toLowerCase()) {
+        container.innerHTML = '';
+        return;
+      }
+
+      try {
+        const snapshot = await get(child(ref(db), "Friends"));
+        if (!snapshot.exists()) return;
+        const friends = snapshot.val();
+
+        const myEntry = Object.entries(friends).find(([id, data]) => 
+          data.name.toLowerCase() === loggedInName.toLowerCase()
+        );
+        const viewEntry = Object.entries(friends).find(([id, data]) => 
+          data.name.toLowerCase() === viewUserName.toLowerCase()
+        );
+
+        if (!myEntry || !viewEntry) return;
+
+        const [myId, myData] = myEntry;
+        const [viewId, viewData] = viewEntry;
+        const isConnected = (myData.connections || []).includes(viewId);
+
+        container.innerHTML = `
+          <div class="fab-container">
+            <button class="fab ${isConnected ? 'fab-disconnect' : 'fab-connect'}">
+              ${isConnected ? '− Disconnect' : '+ Connect with ' + viewUserName}
+            </button>
+          </div>
+        `;
+
+        // Attach click logic
+        container.querySelector('button').onclick = async () => {
+          await toggleConnection(myId, viewId, !isConnected, friends);
+          // Refresh the button and notify other components to update
+          updateFloatingButton();
+          window.dispatchEvent(new Event('popstate')); 
+        };
+
+      } catch (err) {
+        console.error("FAB Update Error:", err);
+      }
     }
+
+    /**
+     * Firebase update logic for adding/removing connections
+     */
+    async function toggleConnection(myId, targetId, isConnecting, allFriends) {
+      let myConns = new Set(allFriends[myId]?.connections || []);
+      let targetConns = new Set(allFriends[targetId]?.connections || []);
+
+      if (isConnecting) {
+        myConns.add(targetId);
+        targetConns.add(myId);
+      } else {
+        myConns.delete(targetId);
+        targetConns.delete(myId);
+      }
+
+      const updates = {};
+      updates[`/Friends/${myId}/connections`] = Array.from(myConns);
+      updates[`/Friends/${targetId}/connections`] = Array.from(targetConns);
+
+      await update(ref(db), updates);
+    }
+
+    // Initialize button state
+    updateFloatingButton();
+
+    // Re-check status if URL or state changes
+    window.addEventListener('popstate', updateFloatingButton);
+    window.addEventListener('url-updated', updateFloatingButton);
   </script>
+
 </body>
 </html>
