@@ -161,30 +161,33 @@ class AuthHeader extends HTMLElement {
         `;
     }
 
-  updateUI(user) {
-    const content = this.shadowRoot.getElementById("auth-content");
-    if (!content) return;
-    if (user) {
-      const username = user.displayName || user.email.split('@')[0];
-      const photoURL = user.photoURL || `https://ui-avatars.com/api/?name=${username}&background=random`;
-      
-      content.innerHTML = `
-        <div class="auth-pill">
-          <a href="user.html?user=${username}&me=${username}" class="user-link">
-            <img src="${photoURL}" class="user-photo" alt="${username}">
-            <span>${username}</span>
-          </a>
-          <button class="logout" id="logout-btn">Logout</button>
-        </div>`;
+    updateUI(user) {
+        const content = this.shadowRoot.getElementById("auth-content");
+        if (!content) return;
+
+        if (user) {
+        const username = user.displayName || user.email.split('@')[0];
+        const photoURL = user.photoURL || `https://ui-avatars.com/api/?name=${username}&background=random`;
         
-      this.shadowRoot.getElementById("logout-btn").onclick = () => {
-        signOut(this.auth).then(() => {
-          window.location.href = "index.html"; 
-        });
-      };
-    } else {
-      content.innerHTML = `<a href="login.html" class="login-btn">Sign In</a>`;
+        // Use ./ to ensure it looks in the root folder relative to the HTML file
+        content.innerHTML = `
+            <div class="auth-pill">
+            <a href="./user.html?user=${username}&me=${username}" class="user-link">
+                <img src="${photoURL}" class="user-photo" alt="${username}">
+                <span>${username}</span>
+            </a>
+            <button class="logout" id="logout-btn">Logout</button>
+            </div>`;
+            
+        this.shadowRoot.getElementById("logout-btn").onclick = () => {
+            signOut(this.auth).then(() => {
+            window.location.href = "./index.html"; 
+            });
+        };
+        } else {
+        // Direct link to the root login.html
+        content.innerHTML = `<a href="./login.html" class="login-btn">Sign In</a>`;
+        }
     }
-  }
 }
 customElements.define("auth-header", AuthHeader);
