@@ -183,7 +183,7 @@ class AuthHeader extends HTMLElement {
         });
       };
     } else {
-      content.innerHTML = `<a href="./login.html" class="login-btn">Sign In</a>`;
+      content.innerHTML = `<a href="login.html" class="login-btn">Sign In</a>`;
     }
   }
 }
